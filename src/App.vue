@@ -26,7 +26,7 @@
              @select:media="currentMedia = $event"/>
     </div>
     <div id="right">
-      <div id="image" @wheel="onMediaScroll" :class="{
+      <div id="image" ref="imageContainer" @wheel="onMediaScroll" :class="{
         'object-fit-cover': viewerOptions.zoom === 'cover',
         'object-fit-none': viewerOptions.zoom === 'none',
       }">
@@ -56,6 +56,7 @@ const currentFolder = ref<FolderEntry | null>(null);
 const previousFolder = ref<FolderEntry | null>(null);
 const currentMedia = ref<FileEntry | null>(null);
 const currentMediaIndex = ref<number>(-1);
+const imageContainer = ref<HTMLElement | null>(null);
 
 const viewerOptions = ref<ViewerOptions>({
   sortBy: "n",
@@ -102,6 +103,25 @@ const prevIndex = () => {
   setIndex(currentMediaIndex.value - 1);
 };
 
+const toggleFullScreen = () => {
+  console.log('toggleFullScreen', imageContainer.value, viewerOptions.value.fullScreen);
+  if (imageContainer.value === null) {
+    viewerOptions.value.fullScreen = false;
+    return;
+  }
+
+  viewerOptions.value.fullScreen = !viewerOptions.value.fullScreen;
+
+  if (!document.fullscreenElement) {
+    if (imageContainer.value.requestFullscreen) {
+      imageContainer.value.requestFullscreen();
+      document.documentElement.classList.add('fullscreen');
+    }
+  } else {
+    document.documentElement.classList.remove('fullscreen');
+    document.exitFullscreen();
+  }
+};
 
 document.addEventListener('keydown', ev => {
 
@@ -132,7 +152,7 @@ document.addEventListener('keydown', ev => {
     // }
   } else if (ev.key === 'f') {
     ev.preventDefault();
-    viewerOptions.value.fullScreen = !viewerOptions.value.fullScreen;
+    toggleFullScreen();
   } else if (ev.key === 'h') {
     ev.preventDefault();
     viewerOptions.value.showHidden = !viewerOptions.value.showHidden;
