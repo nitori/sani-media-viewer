@@ -8,7 +8,7 @@
         /{{ basename }}
       </div>
     </div>
-    <div v-for="folder in folders">
+    <div v-for="folder in folders" :ref="(elem) => focusPreviousFolder(folder, elem)">
       <a href="#" :class="[folder.path === previous?.path ? 'active' : '']"
          @click.prevent="$emit('select:folder', folder)">{{ folder.name }}</a>
     </div>
@@ -18,7 +18,8 @@
 
 <script setup lang="ts">
 import type {FolderEntry} from "../types";
-import {computed} from "vue";
+import {computed, watch} from "vue";
+import {focusElementInParent} from "../utils.ts";
 
 const props = defineProps<{
   folders: FolderEntry[]
@@ -43,6 +44,15 @@ const basename = computed(() => {
   }
   return '';
 });
+
+const focusPreviousFolder = (folder: FolderEntry | null, elem: any) => {
+  if (elem === null || folder === null) {
+    return;
+  }
+  if (folder.path === props.previous?.path) {
+    focusElementInParent(elem, elem.parentNode);
+  }
+};
 
 </script>
 
