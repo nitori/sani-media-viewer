@@ -61,13 +61,40 @@ a:hover {
 
 }
 
-#meta {
+#shortcuts {
+    display: flex;
+    align-items: center;
+    color: white;
+    font-size: 36px;
+    height: 40px;
+    padding: 0 5px;
+}
 
+#shortcuts .icon {
+    flex: 0 1 1em;
+    max-width: 1em;
+    width: 1em;
+    line-height: 14px;
+    padding: 5px;
+    cursor: pointer;
+}
+
+#shortcuts svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+#meta {
+    padding: 5px 10px;
+    height: 24px;
+    line-height: 14px;
+    text-align: right;
 }
 
 #favs-folders {
     border-bottom: 1px;
-    height: calc(50vh - 40px);
+    height: calc(50vh - 40px - 24px);
     display: flex;
 }
 
@@ -157,6 +184,7 @@ a:hover {
 #image.object-fit-cover .media-item {
     object-fit: cover;
 }
+
 #image.object-fit-none .media-item {
     object-fit: none;
 }

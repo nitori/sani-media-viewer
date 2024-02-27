@@ -71,34 +71,3 @@ defineEmits<{
 }>();
 
 </script>
-
-
-<style scoped>
-svg path {
-  fill: currentColor;
-}
-
-#shortcuts {
-  display: flex;
-  align-items: center;
-  color: white;
-  font-size: 36px;
-  height: 40px;
-}
-
-#shortcuts .icon {
-  flex: 0 1 1em;
-  max-width: 1em;
-  width: 1em;
-  line-height: 14px;
-  padding: 5px;
-  cursor: pointer;
-}
-
-#shortcuts svg {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
-</style>
