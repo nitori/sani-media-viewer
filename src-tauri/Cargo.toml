@@ -1,6 +1,6 @@
 [package]
 name = "sani-media-viewer"
-version = "0.0.0"
+version = "0.1.0"
 description = "A web-based media viewer"
 authors = ["Sani"]
 edition = "2021"
