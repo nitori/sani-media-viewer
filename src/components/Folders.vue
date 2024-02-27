@@ -8,7 +8,7 @@
         /{{ basename }}
       </div>
     </div>
-    <div v-for="folder in sortedFolders">
+    <div v-for="folder in folders">
       <a href="#" :class="[folder.path === previous?.path ? 'active' : '']"
          @click.prevent="$emit('select:folder', folder)">{{ folder.name }}</a>
     </div>
@@ -17,14 +17,13 @@
 
 
 <script setup lang="ts">
-import type {FolderEntry, ViewerOptions} from "../types";
+import type {FolderEntry} from "../types";
 import {computed} from "vue";
 
 const props = defineProps<{
-  folders: FolderEntry[],
+  folders: FolderEntry[]
   previous: FolderEntry | null
   current: FolderEntry | null
-  options: ViewerOptions
 }>();
 
 defineEmits<
@@ -43,27 +42,6 @@ const basename = computed(() => {
     return props.current.path.split('/').pop();
   }
   return '';
-});
-
-const sortedFolders = computed(() => {
-  let folders = [...props.folders].filter(f => {
-    if (f.name != '..' && f.name.startsWith('.') && !props.options.showHidden) {
-      return false;
-    }
-    return true;
-  });
-
-  return folders.sort((a, b) => {
-    let aVal = a.name;
-    let bVal = b.name;
-    aVal = aVal.toLowerCase().replace(/[\[\]\(\)\{}<>.]+/g, '');
-    bVal = bVal.toLowerCase().replace(/[\[\]\(\)\{}<>.]+/g, '');
-    if (aVal === '..') return -1;
-    if (bVal === '..') return 1;
-    if (aVal === bVal) return 0;
-    if (aVal < bVal) return -1;
-    return 1;
-  });
 });
 
 </script>

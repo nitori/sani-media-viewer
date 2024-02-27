@@ -49,7 +49,6 @@
 </template>
 
 <script setup lang="ts">
-import {ref, watch} from "vue";
 import {ViewerOptions} from "../types";
 import ArrowDown19 from "../assets/icons/arrow-down-1-9-sharp-solid.svg";
 import ArrowDownAZ from "../assets/icons/arrow-down-a-z-sharp-solid.svg";

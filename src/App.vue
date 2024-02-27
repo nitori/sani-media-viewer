@@ -3,19 +3,19 @@
     <div id="left">
       <div id="shortcuts-meta">
         <Options v-model="viewerOptions"/>
-        <div id="meta"></div>
+        <div id="meta">
+          {{ calculatedIndex + 1 }}/{{ currentFiles.length }}
+        </div>
       </div>
       <div id="favs-folders">
         <Favourites @select:folder="currentFolder = $event"/>
         <Folders :previous="previousFolder"
                  :current="currentFolder"
-                 :folders="folderListing.folders"
-                 :options="viewerOptions"
+                 :folders="currentFolders"
                  @select:folder="currentFolder = $event"/>
       </div>
       <Files :current="currentMedia"
-             :files="folderListing.files"
-             :options="viewerOptions"
+             :files="currentFiles"
              @select:media="currentMedia = $event"/>
     </div>
     <div id="right">
@@ -109,6 +109,33 @@ onMounted(async () => {
   setIndex(0);
 });
 
+const currentFiles = computed(() => {
+  let files = [...folderListing.value.files].filter(f => {
+    return viewerOptions.value.showHidden || !f.name.startsWith('.');
+  }).sort(viewerOptions.value.sortBy === 'm' ? sortByMtime : sortByName);
+  if (viewerOptions.value.sortReverse) {
+    files = files.reverse();
+  }
+  return files;
+});
+
+const currentFolders = computed(() => {
+  return [...folderListing.value.folders].filter(f => {
+    return viewerOptions.value.showHidden || !f.name.startsWith('.') || f.name === '..';
+  }).sort(sortByName);
+});
+
+const calculatedIndex = computed(() => {
+  return calculateIndex(currentMediaIndex.value);
+});
+
+const calculateIndex = (index: number) => {
+  if (viewerOptions.value.sortReverse) {
+    return currentFiles.value.length - 1 - index;
+  }
+  return index;
+};
+
 const onFullscreenChange = (_ev: Event) => {
   if (document.fullscreenElement === null && viewerOptions.value.fullScreen) {
     viewerOptions.value.fullScreen = false;
@@ -116,21 +143,67 @@ const onFullscreenChange = (_ev: Event) => {
 };
 
 const setIndex = (index: number) => {
-  index = Math.min(folderListing.value.files.length - 1, Math.max(0, index));
+  index = Math.min(currentFiles.value.length - 1, Math.max(0, index));
   currentMediaIndex.value = index;
   if (index < 0) {
     currentMedia.value = null;
   } else {
-    currentMedia.value = folderListing.value.files[index];
+    if (viewerOptions.value.sortReverse) {
+      index = currentFiles.value.length - 1 - index;
+    }
+    currentMedia.value = currentFiles.value[index];
   }
 };
 
 const nextIndex = () => {
-  setIndex(currentMediaIndex.value + 1);
+  if (viewerOptions.value.sortReverse) {
+    setIndex(currentMediaIndex.value - 1);
+  } else {
+    setIndex(currentMediaIndex.value + 1);
+  }
 };
 
 const prevIndex = () => {
-  setIndex(currentMediaIndex.value - 1);
+  if (viewerOptions.value.sortReverse) {
+    setIndex(currentMediaIndex.value + 1);
+  } else {
+    setIndex(currentMediaIndex.value - 1);
+  }
+};
+
+
+watch(currentMedia, (value) => {
+  // find in list
+  if (value === null) {
+    setIndex(-1);
+    return;
+  }
+  let index = currentFiles.value.findIndex(f => f.path === value.path);
+  if (index === -1) {
+    setIndex(-1);
+    return;
+  }
+  index = calculateIndex(index);
+  if (index !== calculatedIndex.value) {
+    setIndex(index);
+  }
+});
+
+
+const sortByMtime = (a: FileEntry, b: FileEntry) => {
+  return a.mtime - b.mtime;
+};
+
+const sortByName = (a: FileEntry | FolderEntry, b: FileEntry | FolderEntry) => {
+  let aVal = a.name;
+  let bVal = b.name;
+  aVal = aVal.toLowerCase().replace(/[\[\](){}<>.]+/g, '');
+  bVal = bVal.toLowerCase().replace(/[\[\](){}<>.]+/g, '');
+  if (aVal === '..') return -1;
+  if (bVal === '..') return 1;
+  if (aVal === bVal) return 0;
+  if (aVal < bVal) return -1;
+  return 1;
 };
 
 
@@ -154,7 +227,7 @@ document.addEventListener('keydown', ev => {
   } else if (ev.key === 'End') {
     ev.preventDefault();
     if (viewerOptions.value.zoom === 'contain') {
-      setIndex(folderListing.value.files.length - 1);
+      setIndex(currentFiles.value.length - 1);
       return;
     }
     // if (this._isObjectFitCover() || this._isObjectFitNone()) {
