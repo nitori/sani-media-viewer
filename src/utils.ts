@@ -1,3 +1,5 @@
+import type {FileEntry, FolderEntry} from "./types";
+
 export const posWithin = (itemEl: HTMLElement, parentEl: HTMLElement) => {
     let rect = itemEl.getBoundingClientRect();
     let parentRect = parentEl.getBoundingClientRect();
@@ -13,3 +15,23 @@ export const focusElementInParent = (itemEl: HTMLElement, parentEl: HTMLElement)
     }
     itemEl.scrollIntoView({behavior: 'instant', block: 'center'});
 }
+
+export const sortByMtime = (a: FileEntry, b: FileEntry) => {
+    return a.mtime - b.mtime;
+};
+
+export const sortByName = (a: FileEntry | FolderEntry, b: FileEntry | FolderEntry) => {
+    let aVal = a.name;
+    let bVal = b.name;
+    aVal = aVal.toLowerCase().replace(/[\[\](){}<>.]+/g, '');
+    bVal = bVal.toLowerCase().replace(/[\[\](){}<>.]+/g, '');
+    if (aVal === '..') return -1;
+    if (bVal === '..') return 1;
+    if (aVal === bVal) return 0;
+    if (aVal < bVal) return -1;
+    return 1;
+};
+
+export const isVideo = (name: string) => {
+    return name.endsWith(".mp4") || name.endsWith(".webm");
+};
