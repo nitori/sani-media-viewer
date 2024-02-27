@@ -38,6 +38,7 @@ import type {FolderList, ViewerOptions, FolderEntry, FileEntry} from "./types";
 import {invoke} from "@tauri-apps/api/tauri";
 import MediaItem from "./components/MediaItem.vue";
 import Options from "./components/Options.vue";
+import {sortByName, sortByMtime} from "./utils.ts";
 
 const folderListing = ref<FolderList>({
   canonical_path: "",
@@ -188,23 +189,6 @@ watch(currentMedia, (value) => {
     setIndex(index);
   }
 });
-
-
-const sortByMtime = (a: FileEntry, b: FileEntry) => {
-  return a.mtime - b.mtime;
-};
-
-const sortByName = (a: FileEntry | FolderEntry, b: FileEntry | FolderEntry) => {
-  let aVal = a.name;
-  let bVal = b.name;
-  aVal = aVal.toLowerCase().replace(/[\[\](){}<>.]+/g, '');
-  bVal = bVal.toLowerCase().replace(/[\[\](){}<>.]+/g, '');
-  if (aVal === '..') return -1;
-  if (bVal === '..') return 1;
-  if (aVal === bVal) return 0;
-  if (aVal < bVal) return -1;
-  return 1;
-};
 
 
 document.addEventListener('keydown', ev => {
