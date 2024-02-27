@@ -2302,6 +2302,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "sani-media-viewer"
+version = "0.0.0"
+dependencies = [
+ "dotenv",
+ "dunce",
+ "env_logger",
+ "home",
+ "log",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tauri",
+ "tauri-build",
+]
+
+[[package]]
 name = "scoped-tls"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2806,22 +2822,6 @@ dependencies = [
  "syn 1.0.109",
  "tauri-codegen",
  "tauri-utils",
-]
-
-[[package]]
-name = "tauri-media-viewer"
-version = "0.0.0"
-dependencies = [
- "dotenv",
- "dunce",
- "env_logger",
- "home",
- "log",
- "serde",
- "serde_json",
- "sha2",
- "tauri",
- "tauri-build",
 ]
 
 [[package]]

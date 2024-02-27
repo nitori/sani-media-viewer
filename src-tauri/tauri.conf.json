@@ -6,7 +6,7 @@
     "distDir": "../dist"
   },
   "package": {
-    "productName": "tauri-media-viewer",
+    "productName": "sani-media-viewer",
     "version": "0.0.0"
   },
   "tauri": {
@@ -23,7 +23,7 @@
     },
     "windows": [
       {
-        "title": "tauri-media-viewer",
+        "title": "Sani Media Viewer",
         "width": 1800,
         "height": 1000
       }
