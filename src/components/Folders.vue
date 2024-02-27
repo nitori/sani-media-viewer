@@ -18,7 +18,7 @@
 
 <script setup lang="ts">
 import type {FolderEntry} from "../types";
-import {computed, watch} from "vue";
+import {computed} from "vue";
 import {focusElementInParent} from "../utils.ts";
 
 const props = defineProps<{
