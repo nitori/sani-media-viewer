@@ -1,6 +1,6 @@
 <template>
-  <img v-if="media && isImage" class="media-item" :src="mediaSrc" :alt="media.name" :title="media.name"/>
-  <video v-if="media && isVideo" class="media-item" :src="mediaSrc" :title="media.name" controls autoplay></video>
+  <img v-if="media && isImage" class="media-item" :src="mediaSrc" :alt="media.name"/>
+  <video v-if="media && isVideo" class="media-item" :src="mediaSrc" controls autoplay></video>
 </template>
 
 <script setup lang="ts">
