@@ -33,5 +33,5 @@ export const sortByName = (a: FileEntry | FolderEntry, b: FileEntry | FolderEntr
 };
 
 export const isVideo = (name: string) => {
-    return name.endsWith(".mp4") || name.endsWith(".webm");
+    return name.match(/\.(mp4|webm|mkv)$/);
 };
