@@ -1,8 +1,8 @@
 [package]
-name = "tauri-media-viewer"
+name = "sani-media-viewer"
 version = "0.0.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "A web-based media viewer"
+authors = ["Sani"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
