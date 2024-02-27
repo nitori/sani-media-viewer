@@ -84,6 +84,7 @@ svg path {
   align-items: center;
   color: white;
   font-size: 36px;
+  height: 40px;
 }
 
 #shortcuts .icon {

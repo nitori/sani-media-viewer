@@ -1,7 +1,6 @@
 <template>
   <div id="main">
     <div id="left">
-      <div id="path">{{ folderListing.canonical_path }}</div>
       <div id="shortcuts-meta">
         <Options v-model="viewerOptions"/>
         <div id="meta"></div>
@@ -9,6 +8,7 @@
       <div id="favs-folders">
         <Favourites @select:folder="currentFolder = $event"/>
         <Folders :previous="previousFolder"
+                 :current="currentFolder"
                  :folders="folderListing.folders"
                  :options="viewerOptions"
                  @select:folder="currentFolder = $event"/>
