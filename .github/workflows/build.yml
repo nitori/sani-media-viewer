@@ -1,38 +1,24 @@
-name: build
-run-name: Build Workflow
+name: Release
 on: [ push ]
 jobs:
-  build-ubuntu:
-    runs-on: ubuntu-latest
+  release:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ubuntu-20.04, windows-latest]
+    runs-on: ${{ matrix.platform }}
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v3
         with:
           node-version: '20.11.1'
       - run: sudo apt update
+        if: matrix.platform == 'ubuntu-20.04'
       - run: sudo apt install -y libwebkit2gtk-4.0-dev build-essential curl wget file libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
+        if: matrix.platform == 'ubuntu-20.04'
       - run: npm ci
-      - run: npm run tauri build
-        id: build
-      - uses: actions/upload-artifact@v4
-        if: ${{ always() && steps.build.outcome == 'success' }}
-        with:
-          if-no-files-found: error
-          name: ${{ matrix.platform.artifact }}
-          path: src-tauri/target/release/bundle/**/sani-media-viewer*
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '20.11.1'
-      - run: npm ci
-      - run: npm run tauri build
-        id: build
-      - uses: actions/upload-artifact@v4
-        if: ${{ always() && steps.build.outcome == 'success' }}
-        with:
-          if-no-files-found: error
-          name: ${{ matrix.platform.artifact }}
-          path: src-tauri/target/release/bundle/**/sani-media-viewer*
+      - name: Build the app
+        uses: tauri-apps/tauri-action@v0
