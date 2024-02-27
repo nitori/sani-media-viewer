@@ -74,6 +74,16 @@ watch(currentFolder, (newFolder, oldFolder) => {
   }
 });
 
+onMounted(async () => {
+  folderListing.value = await invoke("get_list", {path: ""});
+  currentFolder.value = {
+    path: folderListing.value.canonical_path,
+    name: folderListing.value.canonical_path.split('/').pop() || '',
+    symlink: false,
+  };
+  setIndex(0);
+});
+
 const watchedFullscreen = computed(() => {
   return viewerOptions.value.fullScreen;
 });
@@ -103,11 +113,6 @@ watch(watchedFullscreen, (doFullscreen) => {
       document.exitFullscreen();
     }
   }
-});
-
-onMounted(async () => {
-  folderListing.value = await invoke("get_list", {path: ""});
-  setIndex(0);
 });
 
 const currentFiles = computed(() => {
