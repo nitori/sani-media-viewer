@@ -72,7 +72,6 @@ watch(currentFolder, (newFolder, oldFolder) => {
   }
 
   if (newFolder) {
-    currentMediaIndex.value = -1;
     (async () => {
       folderListing.value = await invoke("get_list", {path: newFolder.path});
       setIndex(0);
