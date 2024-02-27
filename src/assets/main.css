@@ -55,19 +55,10 @@ a:hover {
 }
 
 #shortcuts-meta {
-    display: flex;
-}
 
-#shortcuts {
-    flex: 0 1 100px;
-    max-width: 100px;
-    width: 100px;
-    color: rgba(255, 255, 255, .7);
-    font-size: 12px;
 }
 
 #meta {
-    flex: 1 0 0;
     display: flex;
     justify-content: flex-end;
     align-items: flex-end;
@@ -175,15 +166,15 @@ a:hover {
 }
 
 .active {
-    color: red;
-    --link-color: red;
-    --link-color-hover: red;
+    color: #4f82ff;
+    --link-color: #4f82ff;
+    --link-color-hover: #4f82ff;
 }
 
 a.active {
-    background: rgba(255, 0, 0, .05);
+    background: rgba(79, 130, 255, 0.05);
 }
 
 .previous {
-    background: rgba(255, 0, 0, .2);
+    background: rgba(79, 130, 255, 0.2);
 }

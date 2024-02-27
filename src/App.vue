@@ -3,14 +3,7 @@
     <div id="left">
       <div id="path">{{ folderListing.canonical_path }}</div>
       <div id="shortcuts-meta">
-        <div id="shortcuts">
-          <div :class="[viewerOptions.sortBy === 'n' ? 'active' : '']">n: name</div>
-          <div :class="[viewerOptions.sortBy === 'm' ? 'active' : '']">m: mtime</div>
-          <div :class="[viewerOptions.sortReverse ? 'active' : '']">r: reverse</div>
-          <div :class="[viewerOptions.showHidden ? 'active' : '']">h: toggle hidden</div>
-          <div :class="[viewerOptions.fullScreen ? 'active' : '']">f: full screen</div>
-          <div>z: zoom ({{ viewerOptions.zoom }})</div>
-        </div>
+        <Options v-model="viewerOptions"/>
         <div id="meta"></div>
       </div>
       <div id="favs-folders">
@@ -29,7 +22,7 @@
       <div id="image" ref="imageContainer" @wheel="onMediaScroll" :class="{
         'object-fit-cover': viewerOptions.zoom === 'cover',
         'object-fit-none': viewerOptions.zoom === 'none',
-      }">
+      }" @fullscreenchange="onFullscreenChange">
         <MediaItem :media="currentMedia"/>
       </div>
     </div>
@@ -37,13 +30,14 @@
 </template>
 
 <script setup lang="ts">
-import {ref, onMounted, watch} from "vue";
+import {ref, onMounted, watch, computed} from "vue";
 import Favourites from "./components/Favourites.vue";
 import Folders from "./components/Folders.vue";
 import Files from "./components/Files.vue";
 import type {FolderList, ViewerOptions, FolderEntry, FileEntry} from "./types";
 import {invoke} from "@tauri-apps/api/tauri";
 import MediaItem from "./components/MediaItem.vue";
+import Options from "./components/Options.vue";
 
 const folderListing = ref<FolderList>({
   canonical_path: "",
@@ -56,7 +50,7 @@ const currentFolder = ref<FolderEntry | null>(null);
 const previousFolder = ref<FolderEntry | null>(null);
 const currentMedia = ref<FileEntry | null>(null);
 const currentMediaIndex = ref<number>(-1);
-const imageContainer = ref<HTMLElement | null>(null);
+const imageContainer = ref<HTMLDivElement | null>(null);
 
 const viewerOptions = ref<ViewerOptions>({
   sortBy: "n",
@@ -79,10 +73,47 @@ watch(currentFolder, (newFolder, oldFolder) => {
   }
 });
 
+const watchedFullscreen = computed(() => {
+  return viewerOptions.value.fullScreen;
+});
+
+watch(watchedFullscreen, (doFullscreen) => {
+  if (imageContainer.value === null) {
+    viewerOptions.value.fullScreen = false;
+    return;
+  }
+
+  if (doFullscreen && !document.fullscreenElement) {
+    if (imageContainer.value.requestFullscreen) {
+      imageContainer.value.requestFullscreen().then(result => {
+        if (result === undefined) { // yes, undefined
+          document.documentElement.classList.add('fullscreen');
+        }
+      });
+    }
+  } else if (!doFullscreen && document.fullscreenElement) {
+    document.documentElement.classList.remove('fullscreen');
+    document.exitFullscreen();
+  } else {
+    // should not appear, but just in case
+    viewerOptions.value.fullScreen = false;
+    document.documentElement.classList.remove('fullscreen');
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    }
+  }
+});
+
 onMounted(async () => {
   folderListing.value = await invoke("get_list", {path: ""});
   setIndex(0);
 });
+
+const onFullscreenChange = (_ev: Event) => {
+  if (document.fullscreenElement === null && viewerOptions.value.fullScreen) {
+    viewerOptions.value.fullScreen = false;
+  }
+};
 
 const setIndex = (index: number) => {
   index = Math.min(folderListing.value.files.length - 1, Math.max(0, index));
@@ -102,28 +133,8 @@ const prevIndex = () => {
   setIndex(currentMediaIndex.value - 1);
 };
 
-const toggleFullScreen = () => {
-  console.log('toggleFullScreen', imageContainer.value, viewerOptions.value.fullScreen);
-  if (imageContainer.value === null) {
-    viewerOptions.value.fullScreen = false;
-    return;
-  }
-
-  viewerOptions.value.fullScreen = !viewerOptions.value.fullScreen;
-
-  if (!document.fullscreenElement) {
-    if (imageContainer.value.requestFullscreen) {
-      imageContainer.value.requestFullscreen();
-      document.documentElement.classList.add('fullscreen');
-    }
-  } else {
-    document.documentElement.classList.remove('fullscreen');
-    document.exitFullscreen();
-  }
-};
 
 document.addEventListener('keydown', ev => {
-
   if (ev.key === 'PageDown') {
     ev.preventDefault();
     nextIndex();
@@ -151,7 +162,7 @@ document.addEventListener('keydown', ev => {
     // }
   } else if (ev.key === 'f') {
     ev.preventDefault();
-    toggleFullScreen();
+    viewerOptions.value.fullScreen = !viewerOptions.value.fullScreen;
   } else if (ev.key === 'h') {
     ev.preventDefault();
     viewerOptions.value.showHidden = !viewerOptions.value.showHidden;
