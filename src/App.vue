@@ -69,7 +69,7 @@ watch(currentFolder, (newFolder, oldFolder) => {
   if (newFolder) {
     (async () => {
       folderListing.value = await invoke("get_list", {path: newFolder.path});
-      setIndex(0);
+      setIndex(calculateIndex(0));
     })();
   }
 });
@@ -81,7 +81,7 @@ onMounted(async () => {
     name: folderListing.value.canonical_path.split('/').pop() || '',
     symlink: false,
   };
-  setIndex(0);
+  setIndex(calculateIndex(0));
 });
 
 const watchedFullscreen = computed(() => {
@@ -206,7 +206,7 @@ document.addEventListener('keydown', ev => {
   } else if (ev.key === 'Home') {
     ev.preventDefault();
     if (viewerOptions.value.zoom === 'contain') {
-      setIndex(0);
+      setIndex(calculateIndex(0));
       return;
     }
 
@@ -216,7 +216,7 @@ document.addEventListener('keydown', ev => {
   } else if (ev.key === 'End') {
     ev.preventDefault();
     if (viewerOptions.value.zoom === 'contain') {
-      setIndex(currentFiles.value.length - 1);
+      setIndex(calculateIndex(currentFiles.value.length - 1));
       return;
     }
     // if (this._isObjectFitCover() || this._isObjectFitNone()) {
