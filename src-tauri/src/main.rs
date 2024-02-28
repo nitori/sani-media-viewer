@@ -260,6 +260,7 @@ async fn get_file(path: String) -> Vec<u8> {
 
 fn main() {
     dotenv().ok();
+    env_logger::init();
 
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
