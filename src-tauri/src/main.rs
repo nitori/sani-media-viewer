@@ -129,16 +129,24 @@ fn normalize_path(path: PathBuf) -> String {
 }
 
 fn check_tilde(path: PathBuf) -> PathBuf {
-    if path.starts_with("~\\") {
+    if path.starts_with("~\\") || path.starts_with("~/") {
         let Some(homedir) = home::home_dir() else {
             return path.clone();
         };
 
-        let Ok(stripped_path) = path.strip_prefix("~\\") else {
-            return path.clone();
+        let final_path = if path.starts_with("~\\") {
+            let Ok(stripped_path) = path.strip_prefix("~\\") else {
+                return path.clone();
+            };
+            stripped_path
+        } else {
+            let Ok(stripped_path) = path.strip_prefix("~/") else {
+                return path.clone();
+            };
+            stripped_path
         };
 
-        homedir.join(stripped_path)
+        homedir.join(final_path)
     } else {
         path.clone()
     }
@@ -166,6 +174,7 @@ fn get_favourites() -> Vec<Favourite> {
         info!(" - {}", fav_folder);
 
         let fav_path = check_tilde(PathBuf::from(fav_folder));
+        info!(" - trying path: {:?}", fav_path.display());
 
         let Some(fav_name) = fav_path.file_name() else {
             continue;
