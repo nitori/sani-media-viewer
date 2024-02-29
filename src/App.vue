@@ -58,6 +58,8 @@ const imageContainer = ref<HTMLDivElement | null>(null);
 
 const viewerOptions = ref<ViewerOptions>(defaultOptions());
 
+let skipRerendering = false;
+
 watch(viewerOptions, () => {
   const state = loadState();
   state.options = JSON.parse(JSON.stringify(viewerOptions.value));
@@ -69,7 +71,7 @@ watch(currentFolder, (newFolder, oldFolder) => {
     previousFolder.value = oldFolder;
   }
 
-  if (newFolder) {
+  if (newFolder && !skipRerendering) {
     const state = loadState();
     state.canonical_path = newFolder.path;
     saveState(state);
@@ -84,12 +86,16 @@ onMounted(async () => {
   const state = loadState();
   viewerOptions.value = state.options;
   folderListing.value = await invoke("get_list", {path: state.canonical_path});
+  skipRerendering = true;
   currentFolder.value = {
     path: folderListing.value.canonical_path,
     name: folderListing.value.canonical_path.split('/').pop() || '',
     symlink: false,
   };
   setIndex(calculateIndex(0));
+  window.setTimeout(() => {
+    skipRerendering = false;
+  }, 500);
 });
 
 const watchedFullscreen = computed(() => {
