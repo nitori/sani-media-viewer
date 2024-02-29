@@ -1,15 +1,15 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::{fs, env};
+use std::{fs, env, thread};
 use std::path::PathBuf;
+use std::sync::mpsc;
 use std::time::{Instant, Duration, UNIX_EPOCH};
 use home;
 use dotenv::dotenv;
 use log::{info, warn};
 use sha2::{Sha256, Digest};
 use serde::{Serialize};
-use tauri::Error;
 
 #[derive(Serialize)]
 struct Favourite {
@@ -46,9 +46,10 @@ struct FolderHash {
     duration: Duration,
 }
 
-const EXTENSIONS: [&'static str; 9] = [
+const EXTENSIONS: [&'static str; 10] = [
     ".jpg",
     ".jpeg",
+    ".jfif",
     ".png",
     ".svg",
     ".gif",
@@ -84,15 +85,7 @@ fn default_path() -> PathBuf {
     }
 }
 
-fn resolve_path(path: &String) -> PathBuf {
-    if path.is_empty() {
-        default_path()
-    } else {
-        PathBuf::from(path).canonicalize().unwrap_or_else(|_| default_path())
-    }
-}
-
-fn calculate_folder_hash(path: PathBuf) -> Result<FolderHash, std::io::Error> {
+fn calculate_folder_hash(path: &PathBuf) -> Result<FolderHash, std::io::Error> {
     let start = Instant::now();
     let mut names: Vec<String> = vec![];
 
@@ -125,13 +118,21 @@ fn calculate_folder_hash(path: PathBuf) -> Result<FolderHash, std::io::Error> {
     })
 }
 
-fn normalize_path(path: PathBuf) -> String {
-    let Ok(fixed_path) = dunce::canonicalize(path.clone()) else {
-        return path.to_string_lossy().into();
+fn normalize_path(path: PathBuf) -> (String, PathBuf) {
+    let canon_path = match path.canonicalize() {
+        Ok(p) => p,
+        Err(_) => path.clone(),
     };
-    let mut normalized_path: String = fixed_path.to_string_lossy().into();
+
+    let mut normalized_path: String = path.to_string_lossy().into();
     normalized_path = normalized_path.replace("\\", "/");
-    normalized_path
+
+    // i don't care anymore
+    if (env::consts::OS == "windows") && normalized_path.starts_with("//?/") {
+        normalized_path = normalized_path[4..].to_string();
+    }
+
+    (normalized_path, canon_path)
 }
 
 fn check_tilde(path: PathBuf) -> PathBuf {
@@ -168,7 +169,7 @@ fn get_favourites() -> Vec<Favourite> {
     for drive in drives {
         favs.push(Favourite {
             name: drive.clone(),
-            path: normalize_path(PathBuf::from(&drive)),
+            path: normalize_path(PathBuf::from(&drive)).0,
         });
     }
 
@@ -193,7 +194,7 @@ fn get_favourites() -> Vec<Favourite> {
 
         favs.push(Favourite {
             name: fav_name.to_string_lossy().into(),
-            path: normalize_path(fav_path),
+            path: normalize_path(fav_path).0,
         });
     }
 
@@ -201,38 +202,120 @@ fn get_favourites() -> Vec<Favourite> {
 }
 
 #[tauri::command]
-async fn get_list(path: String) -> Result<FolderList, Error> {
-    let canonical_path = resolve_path(&path);
-    let hash = calculate_folder_hash(canonical_path.clone())?;
+async fn get_list(path: String) -> Result<FolderList, String> {
+    let start = Instant::now();
 
-    let parent = match canonical_path.parent() {
-        Some(path) => path.to_path_buf(),
-        None => canonical_path.clone(),
+    let input_path = if path.is_empty() {
+        default_path()
+    } else {
+        PathBuf::from(&path)
     };
 
+    let (normalized_path, canonical_path) = normalize_path(input_path.clone());
+
+    // canonical_path is only used to test if the folder exists
+    let Ok(current_meta) = canonical_path.metadata() else {
+        return Err("Path does not exist".into());
+    };
+    if !canonical_path.exists() || !current_meta.is_dir() {
+        return Err("Path does not exist".into());
+    }
+
+    let parent = match input_path.parent() {
+        Some(path) => path.to_path_buf(),
+        None => input_path.clone(),
+    };
+
+    let mut entries: Vec<PathBuf> = vec![];
+    let paths = fs::read_dir(PathBuf::from(&normalized_path)).unwrap();
+    for path in paths {
+        if let Ok(direntry) = path {
+            entries.push(direntry.path());
+        } else {
+            warn!("Could not read directory entry.");
+        }
+    }
+
+    let mut files: Vec<FileEntry> = vec![];
     let mut folders: Vec<FolderEntry> = vec![FolderEntry {
         name: "..".into(),
-        path: normalize_path(parent),
+        path: normalize_path(parent).0,
         symlink: false,
     }];
 
+    if entries.len() > 50 {
+        println!("Entries: {}", entries.len());
+        let chunk_size = entries.len() / (num_cpus::get() * 2 + 1);
+        let chunks = entries.chunks(chunk_size);
+
+        let mut receivers = vec![];
+        for chunk in chunks {
+            let (tx, rx) = mpsc::channel();
+            let chunk_clone = chunk.to_vec().clone();
+
+            thread::spawn(move || {
+                let (fo, fi) = generate_partial_folder_list(chunk_clone);
+                tx.send((fo, fi)).unwrap();
+            });
+
+            receivers.push(rx);
+        }
+
+        for handle in receivers {
+            let (a, b) = handle.recv().unwrap();
+            folders.extend(a);
+            files.extend(b);
+        }
+
+        println!("Entries At the end: {}", folders.len() + files.len());
+    } else {
+        let (a, b) = generate_partial_folder_list(entries);
+        folders.extend(a);
+        files.extend(b);
+    }
+
+    let Ok(hash) = calculate_folder_hash(&canonical_path) else {
+        return Err("Could not calculate folder hash".into());
+    };
+
+    println!("FolderList took: {:?}", start.elapsed().as_secs_f64());
+    Ok(FolderList {
+        canonical_path: normalized_path,
+        folders,
+        files,
+        hash,
+    })
+}
+
+fn generate_partial_folder_list(entries: Vec<PathBuf>) -> (Vec<FolderEntry>, Vec<FileEntry>) {
+    let mut folders: Vec<FolderEntry> = vec![];
     let mut files: Vec<FileEntry> = vec![];
 
-    let paths = fs::read_dir(canonical_path.clone()).unwrap();
-    for path in paths {
-        let Ok(direntry) = path else {
-            warn!("Could not unwrap path");
+    for path in entries {
+        let entry_name: String = match path.file_name() {
+            Some(name) => name.to_string_lossy().into(),
+            None => {
+                warn!("Could not get file name.");
+                continue;
+            }
+        };
+        let Ok(canon_path) = path.canonicalize() else {
+            warn!("Could not canonicalize path.");
             continue;
         };
-        let Ok(meta) = direntry.metadata() else {
+        let Ok(meta_canon) = canon_path.metadata() else {
+            warn!("Could not get direntry metadata of resolved path.");
+            continue;
+        };
+        let Ok(meta) = path.metadata() else {
             warn!("Could not get direntry metadata.");
             continue;
         };
 
-        if meta.is_dir() {
+        if meta_canon.is_dir() {
             folders.push(FolderEntry {
-                path: normalize_path(direntry.path()),
-                name: direntry.file_name().to_string_lossy().into(),
+                path: normalize_path(path).0,
+                name: entry_name,
                 symlink: meta.is_symlink(),
             })
         } else {
@@ -244,26 +327,22 @@ async fn get_list(path: String) -> Result<FolderList, Error> {
                 Err(_) => 0.0
             };
 
-            let lowercase: String = direntry.file_name().to_ascii_lowercase().to_string_lossy().into();
+            let lowercase: String = entry_name.to_ascii_lowercase();
             if EXTENSIONS.iter().all(|v| !lowercase.ends_with(v)) {
+                info!("Skipping non-image file: {}", entry_name);
                 continue;
             }
 
             files.push(FileEntry {
-                path: normalize_path(direntry.path()),
-                name: direntry.file_name().to_string_lossy().into(),
+                path: normalize_path(path).0,
+                name: entry_name,
                 mtime,
                 symlink: meta.is_symlink(),
             });
         }
     }
 
-    Ok(FolderList {
-        canonical_path: normalize_path(canonical_path),
-        folders,
-        files,
-        hash,
-    })
+    (folders, files)
 }
 
 #[tauri::command]
