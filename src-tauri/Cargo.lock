@@ -2310,6 +2310,7 @@ dependencies = [
  "env_logger",
  "home",
  "log",
+ "num_cpus",
  "serde",
  "serde_json",
  "sha2",
