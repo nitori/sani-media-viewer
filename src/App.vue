@@ -69,6 +69,7 @@ watch(currentFolder, (newFolder, oldFolder) => {
   if (newFolder) {
     (async () => {
       folderListing.value = await invoke("get_list", {path: newFolder.path});
+      console.log(folderListing.value);
       setIndex(calculateIndex(0));
     })();
   }
