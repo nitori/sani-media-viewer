@@ -38,13 +38,16 @@ import type {FolderList, ViewerOptions, FolderEntry, FileEntry} from "./types";
 import {invoke} from "@tauri-apps/api/tauri";
 import MediaItem from "./components/MediaItem.vue";
 import Options from "./components/Options.vue";
-import {sortByName, sortByMtime} from "./utils.ts";
+import {sortByName, sortByMtime, saveState, loadState, defaultOptions} from "./utils.ts";
 
 const folderListing = ref<FolderList>({
   canonical_path: "",
   folders: [],
   files: [],
-  hash: "",
+  hash: {
+    hash: "",
+    duration: {secs: 0, nanos: 0},
+  },
 });
 
 const currentFolder = ref<FolderEntry | null>(null);
@@ -53,13 +56,13 @@ const currentMedia = ref<FileEntry | null>(null);
 const currentMediaIndex = ref<number>(-1);
 const imageContainer = ref<HTMLDivElement | null>(null);
 
-const viewerOptions = ref<ViewerOptions>({
-  sortBy: "n",
-  sortReverse: false,
-  showHidden: false,
-  fullScreen: false,
-  zoom: 'contain',
-});
+const viewerOptions = ref<ViewerOptions>(defaultOptions());
+
+watch(viewerOptions, () => {
+  const state = loadState();
+  state.options = JSON.parse(JSON.stringify(viewerOptions.value));
+  saveState(state);
+}, {deep: true});
 
 watch(currentFolder, (newFolder, oldFolder) => {
   if (oldFolder) {
@@ -67,16 +70,20 @@ watch(currentFolder, (newFolder, oldFolder) => {
   }
 
   if (newFolder) {
+    const state = loadState();
+    state.canonical_path = newFolder.path;
+    saveState(state);
     (async () => {
       folderListing.value = await invoke("get_list", {path: newFolder.path});
-      console.log(folderListing.value);
       setIndex(calculateIndex(0));
     })();
   }
 });
 
 onMounted(async () => {
-  folderListing.value = await invoke("get_list", {path: ""});
+  const state = loadState();
+  viewerOptions.value = state.options;
+  folderListing.value = await invoke("get_list", {path: state.canonical_path});
   currentFolder.value = {
     path: folderListing.value.canonical_path,
     name: folderListing.value.canonical_path.split('/').pop() || '',

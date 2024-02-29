@@ -29,5 +29,14 @@ export interface FolderList {
 
 export interface FolderHash {
     hash: string
-    duratanion: any
+    duration: {
+        secs: number
+        nanos: number
+    }
+}
+
+export interface State {
+    options: ViewerOptions
+    canonical_path: String
+    hash: FolderHash
 }
