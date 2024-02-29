@@ -203,8 +203,6 @@ fn get_favourites() -> Vec<Favourite> {
 
 #[tauri::command]
 async fn get_list(path: String) -> Result<FolderList, String> {
-    let start = Instant::now();
-
     let input_path = if path.is_empty() {
         default_path()
     } else {
@@ -244,7 +242,6 @@ async fn get_list(path: String) -> Result<FolderList, String> {
     }];
 
     if entries.len() > 50 {
-        println!("Entries: {}", entries.len());
         let chunk_size = entries.len() / (num_cpus::get() * 2 + 1);
         let chunks = entries.chunks(chunk_size);
 
@@ -266,8 +263,6 @@ async fn get_list(path: String) -> Result<FolderList, String> {
             folders.extend(a);
             files.extend(b);
         }
-
-        println!("Entries At the end: {}", folders.len() + files.len());
     } else {
         let (a, b) = generate_partial_folder_list(entries);
         folders.extend(a);
@@ -278,7 +273,6 @@ async fn get_list(path: String) -> Result<FolderList, String> {
         return Err("Could not calculate folder hash".into());
     };
 
-    println!("FolderList took: {:?}", start.elapsed().as_secs_f64());
     Ok(FolderList {
         canonical_path: normalized_path,
         folders,
