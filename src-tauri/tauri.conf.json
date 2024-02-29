@@ -24,6 +24,7 @@
     "windows": [
       {
         "title": "Sani Media Viewer",
+        "maximized": true,
         "width": 1800,
         "height": 1000
       }
