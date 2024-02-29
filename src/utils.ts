@@ -10,33 +10,12 @@ export const defaultOptions = (): ViewerOptions => {
     };
 };
 
-export const saveState = (state: State) => {
-    localStorage.setItem('sani-image-app-state', JSON.stringify(state));
-}
-
-export const loadState = (): State => {
-    let rawState = localStorage.getItem('sani-image-app-state');
-    let state: State | null = null;
-    if (rawState && rawState.length > 0) {
-        try {
-            state = JSON.parse(rawState);
-        } catch (e) {
-            // stay null
-        }
-    }
-
-    if (!state) {
-        return {
-            options: defaultOptions(),
-            canonical_path: '',
-            hash: {
-                duration: {secs: 0, nanos: 0},
-                hash: ""
-            }
-        }
-    }
-    return state;
-}
+export const defaultState = (): State => {
+    return {
+        options: defaultOptions(),
+        canonical_path: '',
+    };
+};
 
 export const posWithin = (itemEl: HTMLElement, parentEl: HTMLElement) => {
     let rect = itemEl.getBoundingClientRect();

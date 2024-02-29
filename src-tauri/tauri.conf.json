@@ -19,6 +19,18 @@
       "shell": {
         "all": false,
         "open": true
+      },
+      "path": {
+        "all": true
+      },
+      "fs": {
+        "readFile": true,
+        "writeFile": true,
+        "createDir": true,
+        "scope": [
+          "$CONFIG/sani-media-viewer",
+          "$CONFIG/sani-media-viewer/*"
+        ]
       }
     },
     "windows": [
