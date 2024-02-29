@@ -34,11 +34,13 @@ import {ref, onMounted, watch, computed} from "vue";
 import Favourites from "./components/Favourites.vue";
 import Folders from "./components/Folders.vue";
 import Files from "./components/Files.vue";
-import type {FolderList, ViewerOptions, FolderEntry, FileEntry} from "./types";
-import {invoke} from "@tauri-apps/api/tauri";
 import MediaItem from "./components/MediaItem.vue";
 import Options from "./components/Options.vue";
-import {sortByName, sortByMtime, saveState, loadState, defaultOptions} from "./utils.ts";
+import type {FolderList, ViewerOptions, FolderEntry, FileEntry, State} from "./types";
+import {sortByName, sortByMtime, defaultOptions, defaultState} from "./utils.ts";
+import {configDir, join} from '@tauri-apps/api/path';
+import {readTextFile, writeTextFile, createDir} from '@tauri-apps/api/fs';
+import {invoke} from "@tauri-apps/api/tauri";
 
 const folderListing = ref<FolderList>({
   canonical_path: "",
@@ -60,10 +62,10 @@ const viewerOptions = ref<ViewerOptions>(defaultOptions());
 
 let skipRerendering = false;
 
-watch(viewerOptions, () => {
-  const state = loadState();
-  state.options = JSON.parse(JSON.stringify(viewerOptions.value));
-  saveState(state);
+watch(viewerOptions, async () => {
+  const state = await loadState();
+  state.options = JSON.parse(JSON.stringify(viewerOptions.value)); // clone
+  await saveState(state);
 }, {deep: true});
 
 watch(currentFolder, (newFolder, oldFolder) => {
@@ -72,18 +74,44 @@ watch(currentFolder, (newFolder, oldFolder) => {
   }
 
   if (newFolder && !skipRerendering) {
-    const state = loadState();
-    state.canonical_path = newFolder.path;
-    saveState(state);
     (async () => {
+      const state = await loadState();
+      state.canonical_path = newFolder.path;
+      await saveState(state);
       folderListing.value = await invoke("get_list", {path: newFolder.path});
       setIndex(calculateIndex(0));
     })();
   }
 });
 
+const getConfigPaths = async () => {
+  const configDirPath = await configDir();
+  const saniConfigFolder = await join(configDirPath, 'sani-media-viewer');
+  await createDir(saniConfigFolder, {recursive: true});
+  return {configDirPath, saniConfigFolder};
+};
+
+const saveState = async (state: State) => {
+  const {saniConfigFolder} = await getConfigPaths();
+  const stateText = JSON.stringify(state, undefined, 2);
+  await writeTextFile(await join(saniConfigFolder, 'state.json'), stateText);
+};
+
+const loadState = async (): Promise<State> => {
+  const {saniConfigFolder} = await getConfigPaths();
+  let stateText: string = '';
+  try {
+    stateText = await readTextFile(await join(saniConfigFolder, 'state.json'));
+    return JSON.parse(stateText);
+  } catch (e) {
+    const state = defaultState();
+    await saveState(state);
+    return state;
+  }
+};
+
 onMounted(async () => {
-  const state = loadState();
+  const state = await loadState();
   viewerOptions.value = state.options;
   folderListing.value = await invoke("get_list", {path: state.canonical_path});
   skipRerendering = true;

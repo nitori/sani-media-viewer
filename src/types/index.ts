@@ -38,5 +38,4 @@ export interface FolderHash {
 export interface State {
     options: ViewerOptions
     canonical_path: String
-    hash: FolderHash
 }
