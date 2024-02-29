@@ -3,12 +3,13 @@
 
 use std::{fs, env};
 use std::path::PathBuf;
-use std::time::{UNIX_EPOCH};
+use std::time::{Instant, Duration, UNIX_EPOCH};
 use home;
 use dotenv::dotenv;
 use log::{info, warn};
 use sha2::{Sha256, Digest};
 use serde::{Serialize};
+use tauri::Error;
 
 #[derive(Serialize)]
 struct Favourite {
@@ -36,12 +37,13 @@ struct FolderList {
     canonical_path: String,
     folders: Vec<FolderEntry>,
     files: Vec<FileEntry>,
-    hash: String,
+    hash: FolderHash,
 }
 
 #[derive(Serialize)]
 struct FolderHash {
     hash: String,
+    duration: Duration,
 }
 
 const EXTENSIONS: [&'static str; 9] = [
@@ -90,7 +92,8 @@ fn resolve_path(path: &String) -> PathBuf {
     }
 }
 
-fn calculate_folder_hash(path: PathBuf) -> Result<String, std::io::Error> {
+fn calculate_folder_hash(path: PathBuf) -> Result<FolderHash, std::io::Error> {
+    let start = Instant::now();
     let mut names: Vec<String> = vec![];
 
     let readdir = fs::read_dir(path)?;
@@ -116,7 +119,10 @@ fn calculate_folder_hash(path: PathBuf) -> Result<String, std::io::Error> {
     let result = hasher.finalize().to_vec();
     let r2: Vec<_> = result.iter().map(|v| format!("{:02x}", v)).collect();
 
-    Ok(r2.join(""))
+    Ok(FolderHash {
+        hash: r2.join(""),
+        duration: start.elapsed(),
+    })
 }
 
 fn normalize_path(path: PathBuf) -> String {
@@ -195,9 +201,9 @@ fn get_favourites() -> Vec<Favourite> {
 }
 
 #[tauri::command]
-async fn get_list(path: String) -> FolderList {
+async fn get_list(path: String) -> Result<FolderList, Error> {
     let canonical_path = resolve_path(&path);
-    let hash = calculate_folder_hash(canonical_path.clone()).unwrap_or("".into());
+    let hash = calculate_folder_hash(canonical_path.clone())?;
 
     let parent = match canonical_path.parent() {
         Some(path) => path.to_path_buf(),
@@ -252,12 +258,12 @@ async fn get_list(path: String) -> FolderList {
         }
     }
 
-    FolderList {
+    Ok(FolderList {
         canonical_path: normalize_path(canonical_path),
         folders,
         files,
         hash,
-    }
+    })
 }
 
 #[tauri::command]

@@ -23,5 +23,11 @@ export interface FolderList {
     canonical_path: string,
     folders: FolderEntry[],
     files: FileEntry[],
-    hash: string,
+    hash: FolderHash,
+}
+
+
+export interface FolderHash {
+    hash: string
+    duratanion: any
 }
