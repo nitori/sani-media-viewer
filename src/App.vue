@@ -75,10 +75,8 @@ watch(currentFolder, (newFolder, oldFolder) => {
     const state = loadState();
     state.canonical_path = newFolder.path;
     saveState(state);
-    let start = performance.now();
     (async () => {
       folderListing.value = await invoke("get_list", {path: newFolder.path});
-      console.log('get_list', (performance.now() - start) / 1000);
       setIndex(calculateIndex(0));
     })();
   }
