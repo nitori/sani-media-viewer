@@ -13,7 +13,8 @@ export const defaultOptions = (): ViewerOptions => {
 export const defaultState = (): State => {
     return {
         options: defaultOptions(),
-        canonical_path: '',
+        last_folder: '',
+        last_media: '',
     };
 };
 
