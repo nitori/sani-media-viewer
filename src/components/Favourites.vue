@@ -17,9 +17,9 @@ onMounted(async () => {
   favs.value = await invoke('get_favourites');
 });
 
-const emits = defineEmits<
-    (e: 'select:folder', folder: FolderEntry) => void
->();
+const emits = defineEmits<{
+  (e: 'select:folder', folder: FolderEntry): void
+}>();
 
 function emitFolderChangeEvent(folder: { name: string, path: string }) {
   emits('select:folder', {

@@ -67,11 +67,11 @@ defineProps<{
 }>();
 
 defineEmits<{
-  (e: 'option:sortBy', value: 'm' | 'n'): void;
-  (e: 'option:sortReverse', value: boolean): void;
-  (e: 'option:showHidden', value: boolean): void;
-  (e: 'option:fullScreen', value: boolean): void;
-  (e: 'option:zoom', value: 'cover' | 'contain' | 'none'): void;
+  (e: 'option:sortBy', value: 'm' | 'n'): void,
+  (e: 'option:sortReverse', value: boolean): void,
+  (e: 'option:showHidden', value: boolean): void,
+  (e: 'option:fullScreen', value: boolean): void,
+  (e: 'option:zoom', value: 'cover' | 'contain' | 'none'): void,
 }>();
 
 </script>

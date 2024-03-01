@@ -16,9 +16,9 @@ const props = defineProps<{
   current: FileEntry | null
 }>();
 
-defineEmits<
-    (e: 'select:media', media: FileEntry) => void
->();
+defineEmits<{
+  (e: 'select:media', media: FileEntry): void
+}>();
 
 const focusCurrentFile = (file: FileEntry | null, elem: any) => {
   if (elem === null || file === null) {

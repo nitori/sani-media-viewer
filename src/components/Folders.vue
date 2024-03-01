@@ -27,9 +27,9 @@ const props = defineProps<{
   current: FolderEntry | null
 }>();
 
-defineEmits<
-    (e: 'select:folder', folder: FolderEntry) => void
->();
+defineEmits<{
+  (e: 'select:folder', folder: FolderEntry): void
+}>();
 
 const dirname = computed(() => {
   if (props.current) {
