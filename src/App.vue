@@ -2,9 +2,15 @@
   <div id="main">
     <div id="left">
       <div id="shortcuts-meta">
-        <Options v-model="viewerOptions"/>
+        <Options :options="viewerOptions"
+                 @option:sort-by="viewerOptions.sortBy = $event"
+                 @option:sort-reverse="viewerOptions.sortReverse = $event"
+                 @option:show-hidden="viewerOptions.showHidden = $event"
+                 @option:full-screen="viewerOptions.fullScreen = $event"
+                 @option:zoom="viewerOptions.zoom = $event"
+        />
         <div id="meta">
-          {{ calculatedIndex + 1 }}/{{ currentFiles.length }}
+          {{ currentMediaIndex + 1 }}/{{ currentFiles.length }}
         </div>
       </div>
       <div id="favs-folders">
@@ -55,33 +61,83 @@ const folderListing = ref<FolderList>({
 const currentFolder = ref<FolderEntry | null>(null);
 const previousFolder = ref<FolderEntry | null>(null);
 const currentMedia = ref<FileEntry | null>(null);
-const currentMediaIndex = ref<number>(-1);
 const imageContainer = ref<HTMLDivElement | null>(null);
-
 const viewerOptions = ref<ViewerOptions>(defaultOptions());
 
-let skipRerendering = false;
+const currentFiles = ref<FileEntry[]>([]);
+const currentFolders = ref<FolderEntry[]>([]);
+
+const currentMediaIndex = computed(() => {
+  let index = currentFiles.value.findIndex(f => f.path === currentMedia.value?.path);
+  if (index === -1) {
+    return 0;
+  }
+  return index;
+});
+
+
+function buildFiles() {
+  let files = [...folderListing.value.files].filter(f => {
+    return viewerOptions.value.showHidden || !f.name.startsWith('.');
+  }).sort(viewerOptions.value.sortBy === 'm' ? sortByMtime : sortByName);
+  if (viewerOptions.value.sortReverse) {
+    files = files.reverse();
+  }
+  return files;
+}
+
+function buildFolders() {
+  return [...folderListing.value.folders].filter(f => {
+    return viewerOptions.value.showHidden || !f.name.startsWith('.') || f.name === '..';
+  }).sort(sortByName);
+}
+
+function updateFilesAndFolders() {
+  let lastMediaPath = currentMedia.value?.path;
+  currentFiles.value = buildFiles();
+  currentFolders.value = buildFolders();
+  if (lastMediaPath) {
+    let foundMedia = currentFiles.value.find(f => f.path === lastMediaPath) || null;
+    if (!foundMedia) {
+      foundMedia = currentFiles.value[0] || null;
+    }
+    currentMedia.value = foundMedia;
+  }
+}
+
 
 watch(viewerOptions, async () => {
+  updateFilesAndFolders();
   const state = await loadState();
   state.options = JSON.parse(JSON.stringify(viewerOptions.value)); // clone
   await saveState(state);
 }, {deep: true});
+
 
 watch(currentFolder, (newFolder, oldFolder) => {
   if (oldFolder) {
     previousFolder.value = oldFolder;
   }
 
-  if (newFolder && !skipRerendering) {
+  if (newFolder) {
     (async () => {
       const state = await loadState();
       state.canonical_path = newFolder.path;
       await saveState(state);
       folderListing.value = await invoke("get_list", {path: newFolder.path});
-      setIndex(calculateIndex(0));
+      updateFilesAndFolders();
     })();
   }
+});
+
+watch(currentMedia, async (newMedia) => {
+  let state = await loadState();
+  if (newMedia) {
+    state.last_media = newMedia.path;
+  } else {
+    state.last_media = '';
+  }
+  await saveState(state);
 });
 
 const getConfigPaths = async () => {
@@ -114,141 +170,62 @@ onMounted(async () => {
   const state = await loadState();
   viewerOptions.value = state.options;
   folderListing.value = await invoke("get_list", {path: state.canonical_path});
-  skipRerendering = true;
+  if (state.last_media !== '') {
+    currentMedia.value = folderListing.value.files.find(f => f.path === state.last_media) || null;
+  }
   currentFolder.value = {
     path: folderListing.value.canonical_path,
     name: folderListing.value.canonical_path.split('/').pop() || '',
     symlink: false,
   };
-  setIndex(calculateIndex(0));
-  window.setTimeout(() => {
-    skipRerendering = false;
-  }, 500);
+  updateFilesAndFolders();
 });
 
-const watchedFullscreen = computed(() => {
-  return viewerOptions.value.fullScreen;
-});
 
-watch(watchedFullscreen, (doFullscreen) => {
-  if (imageContainer.value === null) {
-    viewerOptions.value.fullScreen = false;
-    return;
-  }
-
-  if (doFullscreen && !document.fullscreenElement) {
-    if (imageContainer.value.requestFullscreen) {
-      imageContainer.value.requestFullscreen().then(result => {
-        if (result === undefined) { // yes, undefined
-          document.documentElement.classList.add('fullscreen');
-        }
-      });
-    }
-  } else if (!doFullscreen && document.fullscreenElement) {
-    document.documentElement.classList.remove('fullscreen');
-    document.exitFullscreen();
+const setToFirstMedia = () => {
+  if (currentFiles.value.length > 0) {
+    currentMedia.value = currentFiles.value[0];
   } else {
-    // should not appear, but just in case
-    viewerOptions.value.fullScreen = false;
-    document.documentElement.classList.remove('fullscreen');
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-    }
-  }
-});
-
-const currentFiles = computed(() => {
-  let files = [...folderListing.value.files].filter(f => {
-    return viewerOptions.value.showHidden || !f.name.startsWith('.');
-  }).sort(viewerOptions.value.sortBy === 'm' ? sortByMtime : sortByName);
-  if (viewerOptions.value.sortReverse) {
-    files = files.reverse();
-  }
-  return files;
-});
-
-const currentFolders = computed(() => {
-  return [...folderListing.value.folders].filter(f => {
-    return viewerOptions.value.showHidden || !f.name.startsWith('.') || f.name === '..';
-  }).sort(sortByName);
-});
-
-const calculatedIndex = computed(() => {
-  return calculateIndex(currentMediaIndex.value);
-});
-
-const calculateIndex = (index: number) => {
-  if (viewerOptions.value.sortReverse) {
-    return currentFiles.value.length - 1 - index;
-  }
-  return index;
-};
-
-const onFullscreenChange = (_ev: Event) => {
-  if (document.fullscreenElement === null && viewerOptions.value.fullScreen) {
-    viewerOptions.value.fullScreen = false;
-  }
-};
-
-const setIndex = (index: number) => {
-  index = Math.min(currentFiles.value.length - 1, Math.max(0, index));
-  currentMediaIndex.value = index;
-  if (index < 0) {
     currentMedia.value = null;
-  } else {
-    if (viewerOptions.value.sortReverse) {
-      index = currentFiles.value.length - 1 - index;
-    }
-    currentMedia.value = currentFiles.value[index];
   }
 };
 
-const nextIndex = () => {
-  if (viewerOptions.value.sortReverse) {
-    setIndex(currentMediaIndex.value - 1);
+const setToLastMedia = () => {
+  if (currentFiles.value.length > 0) {
+    currentMedia.value = currentFiles.value[currentFiles.value.length - 1];
   } else {
-    setIndex(currentMediaIndex.value + 1);
+    currentMedia.value = null;
   }
 };
 
-const prevIndex = () => {
-  if (viewerOptions.value.sortReverse) {
-    setIndex(currentMediaIndex.value + 1);
-  } else {
-    setIndex(currentMediaIndex.value - 1);
-  }
-};
-
-
-watch(currentMedia, (value) => {
-  // find in list
-  if (value === null) {
-    setIndex(-1);
+const nextMedia = () => {
+  if (currentFiles.value.length === 0) {
     return;
   }
-  let index = currentFiles.value.findIndex(f => f.path === value.path);
-  if (index === -1) {
-    setIndex(-1);
+  let index = Math.min(currentFiles.value.length - 1, currentMediaIndex.value + 1);
+  currentMedia.value = currentFiles.value[index];
+};
+
+const prevMedia = () => {
+  if (currentFiles.value.length === 0) {
     return;
   }
-  index = calculateIndex(index);
-  if (index !== calculatedIndex.value) {
-    setIndex(index);
-  }
-});
+  let index = Math.max(0, currentMediaIndex.value - 1);
+  currentMedia.value = currentFiles.value[index];
+};
 
 
 document.addEventListener('keydown', ev => {
   if (ev.key === 'PageDown') {
     ev.preventDefault();
-    nextIndex();
+    nextMedia();
   } else if (ev.key === 'PageUp') {
     ev.preventDefault();
-    prevIndex();
+    prevMedia();
   } else if (ev.key === 'Home') {
     ev.preventDefault();
     if (viewerOptions.value.zoom === 'contain') {
-      setIndex(calculateIndex(0));
+      setToFirstMedia();
       return;
     }
 
@@ -258,7 +235,7 @@ document.addEventListener('keydown', ev => {
   } else if (ev.key === 'End') {
     ev.preventDefault();
     if (viewerOptions.value.zoom === 'contain') {
-      setIndex(calculateIndex(currentFiles.value.length - 1));
+      setToLastMedia();
       return;
     }
     // if (this._isObjectFitCover() || this._isObjectFitNone()) {
@@ -295,7 +272,7 @@ document.addEventListener('keydown', ev => {
 const onMediaScroll = (ev: WheelEvent) => {
   if (ev.deltaY < 0) {
     if (viewerOptions.value.zoom === 'contain') {
-      prevIndex();
+      prevMedia();
       return;
     }
     // if (this._isObjectFitCover() || this._isObjectFitNone()) {
@@ -303,12 +280,50 @@ const onMediaScroll = (ev: WheelEvent) => {
     // }
   } else if (ev.deltaY > 0) {
     if (viewerOptions.value.zoom === 'contain') {
-      nextIndex();
+      nextMedia();
       return;
     }
     // if (this._isObjectFitCover() || this._isObjectFitNone()) {
     //   this.moveMediaDown();
     // }
+  }
+};
+
+
+// Fullscreen stuff
+const watchedFullscreen = computed(() => {
+  return viewerOptions.value.fullScreen;
+});
+
+watch(watchedFullscreen, (doFullscreen) => {
+  if (imageContainer.value === null) {
+    viewerOptions.value.fullScreen = false;
+    return;
+  }
+  if (doFullscreen && !document.fullscreenElement) {
+    if (imageContainer.value.requestFullscreen) {
+      imageContainer.value.requestFullscreen().then(result => {
+        if (result === undefined) { // yes, undefined
+          document.documentElement.classList.add('fullscreen');
+        }
+      });
+    }
+  } else if (!doFullscreen && document.fullscreenElement) {
+    document.documentElement.classList.remove('fullscreen');
+    document.exitFullscreen();
+  } else {
+    // should not appear, but just in case
+    viewerOptions.value.fullScreen = false;
+    document.documentElement.classList.remove('fullscreen');
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    }
+  }
+});
+
+const onFullscreenChange = (_ev: Event) => {
+  if (document.fullscreenElement === null && viewerOptions.value.fullScreen) {
+    viewerOptions.value.fullScreen = false;
   }
 };
 

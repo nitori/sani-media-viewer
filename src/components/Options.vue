@@ -1,48 +1,48 @@
 <template>
   <div id="shortcuts">
-    <div class="icon" :class="[modelValue.sortBy === 'n' ? 'active' : '']" title="Sort by name: N"
-         @click.prevent="$emit('update:modelValue',{...modelValue, sortBy:'n'})">
-      <ArrowDownAZ v-if="!modelValue.sortReverse"/>
+    <div class="icon" :class="[options.sortBy === 'n' ? 'active' : '']" title="Sort by name: N"
+         @click.prevent="$emit('option:sortBy', 'n')">
+      <ArrowDownAZ v-if="!options.sortReverse"/>
       <ArrowUpAZ v-else/>
     </div>
-    <div class="icon" :class="[modelValue.sortBy === 'm' ? 'active' : '']" title="Sort by mtime: M"
-         @click.prevent="$emit('update:modelValue',{...modelValue, sortBy: 'm'})">
-      <ArrowDown19 v-if="!modelValue.sortReverse"/>
+    <div class="icon" :class="[options.sortBy === 'm' ? 'active' : '']" title="Sort by mtime: M"
+         @click.prevent="$emit('option:sortBy', 'm')">
+      <ArrowDown19 v-if="!options.sortReverse"/>
       <ArrowUp19 v-else/>
     </div>
 
-    <div class="icon" :class="[modelValue.sortReverse ? 'active' : '']" title="Reverse sorting: R"
-         @click.prevent="$emit('update:modelValue',{...modelValue, sortReverse: !modelValue.sortReverse})">
+    <div class="icon" :class="[options.sortReverse ? 'active' : '']" title="Reverse sorting: R"
+         @click.prevent="$emit('option:sortReverse', !options.sortReverse)">
       <ArrowDownUp/>
     </div>
 
-    <div class="icon active" v-if="modelValue.showHidden" title="Hide hidden files: H"
-         @click.prevent="$emit('update:modelValue',{...modelValue, showHidden: false})">
+    <div class="icon active" v-if="options.showHidden" title="Hide hidden files: H"
+         @click.prevent="$emit('option:showHidden', false)">
       <EyeOpen/>
     </div>
-    <div class="icon" v-if="!modelValue.showHidden" title="Show hidden files: H"
-         @click.prevent="$emit('update:modelValue',{...modelValue, showHidden: true})">
+    <div class="icon" v-if="!options.showHidden" title="Show hidden files: H"
+         @click.prevent="$emit('option:showHidden', true)">
       <EyeSlash/>
     </div>
 
-    <div class="icon" title="Toggle full screen: F" :class="[modelValue.fullScreen ? 'active' : '']"
-         @click.prevent="$emit('update:modelValue',{...modelValue, fullScreen: !modelValue.fullScreen})">
+    <div class="icon" title="Toggle full screen: F" :class="[options.fullScreen ? 'active' : '']"
+         @click.prevent="$emit('option:fullScreen', !options.fullScreen)">
       <Expand/>
     </div>
 
     <div class="icon" title="Zoom to cover: z"
-         v-if="modelValue.zoom === 'contain'"
-         @click.prevent="$emit('update:modelValue',{...modelValue, zoom: 'cover'})">
+         v-if="options.zoom === 'contain'"
+         @click.prevent="$emit('option:zoom', 'cover')">
       <MagnPlus/>
     </div>
     <div class="icon active" title="Zoom to original size: z"
-         v-if="modelValue.zoom === 'cover'"
-         @click.prevent="$emit('update:modelValue',{...modelValue, zoom: 'none'})">
+         v-if="options.zoom === 'cover'"
+         @click.prevent="$emit('option:zoom', 'none')">
       <MagnMinus/>
     </div>
     <div class="icon active" title="Reset to fit: z"
-         v-if="modelValue.zoom === 'none'"
-         @click.prevent="$emit('update:modelValue',{...modelValue, zoom: 'contain'})">
+         v-if="options.zoom === 'none'"
+         @click.prevent="$emit('option:zoom', 'contain')">
       <Magn/>
     </div>
   </div>
@@ -63,11 +63,15 @@ import MagnPlus from "../assets/icons/magnifying-glass-plus-sharp-solid.svg";
 import Magn from "../assets/icons/magnifying-glass-sharp-solid.svg";
 
 defineProps<{
-  modelValue: ViewerOptions
+  options: ViewerOptions
 }>();
 
 defineEmits<{
-  (e: 'update:modelValue', value: ViewerOptions): void,
+  (e: 'option:sortBy', value: 'm' | 'n'): void;
+  (e: 'option:sortReverse', value: boolean): void;
+  (e: 'option:showHidden', value: boolean): void;
+  (e: 'option:fullScreen', value: boolean): void;
+  (e: 'option:zoom', value: 'cover' | 'contain' | 'none'): void;
 }>();
 
 </script>
