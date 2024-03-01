@@ -122,7 +122,7 @@ watch(currentFolder, (newFolder, oldFolder) => {
   if (newFolder) {
     (async () => {
       const state = await loadState();
-      state.canonical_path = newFolder.path;
+      state.last_folder = newFolder.path;
       await saveState(state);
       folderListing.value = await invoke("get_list", {path: newFolder.path});
       updateFilesAndFolders();
@@ -169,7 +169,7 @@ const loadState = async (): Promise<State> => {
 onMounted(async () => {
   const state = await loadState();
   viewerOptions.value = state.options;
-  folderListing.value = await invoke("get_list", {path: state.canonical_path});
+  folderListing.value = await invoke("get_list", {path: state.last_folder});
   if (state.last_media !== '') {
     currentMedia.value = folderListing.value.files.find(f => f.path === state.last_media) || null;
   }

@@ -37,6 +37,6 @@ export interface FolderHash {
 
 export interface State {
     options: ViewerOptions
-    canonical_path: string
+    last_folder: string
     last_media: string
 }
