@@ -96,10 +96,30 @@ fn calculate_folder_hash(path: &PathBuf) -> Result<FolderHash, std::io::Error> {
         };
 
         let filename = direntry.file_name().to_owned();
-        let Some(strname) = filename.to_str() else {
+        let strname: String = filename.to_string_lossy().into();
+
+        let Ok(meta) = direntry.metadata() else {
+            warn!("Could not get metadata for {:?}", strname);
             continue;
         };
+
+        let Ok(mtime) = meta.modified() else {
+            warn!("Could not get modified time for {:?}", strname);
+            continue;
+        };
+
+        let lowercase = strname.to_ascii_lowercase();
+        if EXTENSIONS.iter().all(|v| !lowercase.ends_with(v)) {
+            continue;
+        }
+
+        let mtime = match mtime.duration_since(UNIX_EPOCH) {
+            Ok(duration) => duration.as_secs_f64(),
+            Err(_) => 0.0
+        };
+
         names.push(strname.into());
+        names.push(mtime.to_string());
     }
 
     names.sort();
