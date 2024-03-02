@@ -187,7 +187,6 @@ onMounted(async () => {
 async function check_folder_hash() {
   try {
     const hash: FolderHash = await invoke("get_folder_hash", {path: folderListing.value.canonical_path});
-    console.log(hash.hash, folderListing.value.hash.hash);
     if (hash.hash !== folderListing.value.hash.hash) {
       folderListing.value = await invoke("get_list", {path: folderListing.value.canonical_path});
       updateFilesAndFolders();
