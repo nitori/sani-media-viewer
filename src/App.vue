@@ -42,7 +42,7 @@ import Folders from "./components/Folders.vue";
 import Files from "./components/Files.vue";
 import MediaItem from "./components/MediaItem.vue";
 import Options from "./components/Options.vue";
-import type {FolderList, ViewerOptions, FolderEntry, FileEntry, State} from "./types";
+import type {FolderHash, FolderList, ViewerOptions, FolderEntry, FileEntry, State} from "./types";
 import {sortByName, sortByMtime, defaultOptions, defaultState} from "./utils.ts";
 import {configDir, join} from '@tauri-apps/api/path';
 import {readTextFile, writeTextFile, createDir} from '@tauri-apps/api/fs';
@@ -179,7 +179,23 @@ onMounted(async () => {
     symlink: false,
   };
   updateFilesAndFolders();
+
+  check_folder_hash();
 });
+
+
+async function check_folder_hash() {
+  try {
+    const hash: FolderHash = await invoke("get_folder_hash", {path: folderListing.value.canonical_path});
+    console.log(hash.hash, folderListing.value.hash.hash);
+    if (hash.hash !== folderListing.value.hash.hash) {
+      folderListing.value = await invoke("get_list", {path: folderListing.value.canonical_path});
+      updateFilesAndFolders();
+    }
+  } finally {
+    window.setTimeout(check_folder_hash, 10000);
+  }
+}
 
 
 const setToFirstMedia = () => {

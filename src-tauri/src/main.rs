@@ -281,6 +281,37 @@ async fn get_list(path: String) -> Result<FolderList, String> {
     })
 }
 
+#[tauri::command]
+async fn get_folder_hash(path: String) -> Result<FolderHash, String> {
+    if path.is_empty() {
+        return Err("Path is empty".into());
+    }
+
+    let pathbuf = PathBuf::from(&path);
+
+    let Ok(canon_path) = pathbuf.canonicalize() else {
+        return Err("Error processing path".into());
+    };
+
+    if !canon_path.exists() {
+        return Err("Path does not exist".into());
+    }
+
+    let Ok(meta) = canon_path.metadata() else {
+        return Err("Error getting metadata".into());
+    };
+
+    if !meta.is_dir() {
+        return Err("Path is not a directory".into());
+    }
+
+    let Ok(folder_hash) = calculate_folder_hash(&canon_path) else {
+        return Err("Error calculating folder hash".into());
+    };
+
+    Ok(folder_hash)
+}
+
 fn generate_partial_folder_list(entries: Vec<PathBuf>) -> (Vec<FolderEntry>, Vec<FileEntry>) {
     let mut folders: Vec<FolderEntry> = vec![];
     let mut files: Vec<FileEntry> = vec![];
@@ -355,6 +386,7 @@ fn main() {
             get_favourites,
             get_list,
             get_file,
+            get_folder_hash,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
